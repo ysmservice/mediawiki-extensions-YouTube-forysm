@@ -44,6 +44,7 @@ class YouTube {
 		$parser->setHook( 'tangler', [ __CLASS__, 'embedTangler' ] );
 		$parser->setHook( 'gtrailer', [ __CLASS__, 'embedGametrailers' ] );
 		$parser->setHook( 'nicovideo', [ __CLASS__, 'embedNicovideo' ] );
+		$parser->setHook( 'ysmfilm', [ __CLASS__, 'embedYsmfilmVideo' ] );
 	}
 
 	/**
@@ -52,6 +53,47 @@ class YouTube {
 	 * @param string $url YouTube video URL
 	 * @return string|bool Video ID on success, boolean false on failure
 	 */
+	public static function url2yfvid( $url ) {
+		$id = $url;
+
+		if ( preg_match( '/https:\/\/ysmfilm\.net\/view.php\?id\=(.+)$/', $url, $preg ) ) {
+			$id = $preg[1];
+		}
+
+		return $id;
+	}
+
+	public static function embedYsmfilmVideo( $input, $argv, $parser ) {
+		$aovid   = '';
+		$width  = $width_max  = 320;
+		$height = $height_max = 263;
+
+		if ( !empty( $argv['aovid'] ) ) {
+			$aovid = self::url2yfvid( $argv['yfvid'] );
+		} elseif ( !empty( $input ) ) {
+			$aovid = self::url2yfvid( $input );
+		}
+		if (
+			!empty( $argv['width'] ) &&
+			settype( $argv['width'], 'integer' ) &&
+			( $width_max >= $argv['width'] )
+		) {
+			$width = $argv['width'];
+		}
+		if (
+			!empty( $argv['height'] ) &&
+			settype( $argv['height'], 'integer' ) &&
+			( $height_max >= $argv['height'] )
+		) {
+			$height = $argv['height'];
+		}
+
+		if ( !empty( $aovid ) ) {
+			$url = "https://ysmfilm.net/video/{$aovid}.mp4";
+			return "<video width=\"".$width."\" height=\"".$height."\" src=\"{$url}\" controls=\"\" controlslist=\"nodownload\"><source src=\"{$url}\"><object width=\"{$width}\" height=\"{$height}\" data=\"{$url}\"><param name=\"src\" value=\"{$url}\"><param name=\"autoplay\" value=\"false\"><param name=\"controller\" value=\"true\"><embed src=\"{$url}\" width=\"{$width}\" height=\"{$height}\" type=\"video/mp4\" autoplay=\"false\" controller=\"true\" pluginspage=\"http://www.apple.com/jp/quicktime/download/\"></object></video>";
+		}
+	}
+
 	public static function url2ytid( $url ) {
 		// @see http://linuxpanda.wordpress.com/2013/07/24/ultimate-best-regex-pattern-to-get-grab-parse-youtube-video-id-from-any-youtube-link-url/
 		$pattern = '~(?:http|https|)(?::\/\/|)(?:www.|)(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/ytscreeningroom\?v=|\/feeds\/api\/videos\/|\/user\S*[^\w\-\s]|\S*[^\w\-\s]))([\w\-]{11})[a-z0-9;:@?&%=+\/\$_.-]*~i';
