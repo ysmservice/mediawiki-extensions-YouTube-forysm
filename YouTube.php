@@ -44,8 +44,55 @@ class YouTube {
 		$parser->setHook( 'tangler', [ __CLASS__, 'embedTangler' ] );
 		$parser->setHook( 'gtrailer', [ __CLASS__, 'embedGametrailers' ] );
 		$parser->setHook( 'nicovideo', [ __CLASS__, 'embedNicovideo' ] );
+		$parser->setHook( 'ysmfilm', [ __CLASS__, 'embedYsmfilmVideo' ] );
 	}
 
+	/**
+	 * Get the YsmFilm video ID from the supplied URL.
+	 *
+	 * @param string $url YouTube video URL
+	 * @return string|bool Video ID on success, boolean false on failure
+	 */
+	public static function url2yfvid( $url ) {
+		$id = $url;
+
+		if ( preg_match( '/https:\/\/ysmfilm\.net\/view.php\?id\=(.+)$/', $url, $preg ) ) {
+			$id = $preg[1];
+		}
+
+		return $id;
+	}
+
+	public static function embedYsmfilmVideo( $input, $argv, $parser ) {
+		$aovid   = '';
+		$width  = $width_max  = 320;
+		$height = $height_max = 263;
+
+		if ( !empty( $argv['aovid'] ) ) {
+			$aovid = self::url2yfvid( $argv['yfvid'] );
+		} elseif ( !empty( $input ) ) {
+			$aovid = self::url2yfvid( $input );
+		}
+		if (
+			!empty( $argv['width'] ) &&
+			settype( $argv['width'], 'integer' ) &&
+			( $width_max >= $argv['width'] )
+		) {
+			$width = $argv['width'];
+		}
+		if (
+			!empty( $argv['height'] ) &&
+			settype( $argv['height'], 'integer' ) &&
+			( $height_max >= $argv['height'] )
+		) {
+			$height = $argv['height'];
+		}
+
+		if ( !empty( $aovid ) ) {
+			$url = "https://ysmfilm.net/video/{$aovid}.mp4";
+			return "<video width=\"".$width."\" height=\"".$height."\" src=\"{$url}\" controls=\"\" controlslist=\"nodownload\"><source src=\"{$url}\"><object width=\"{$width}\" height=\"{$height}\" data=\"{$url}\"><param name=\"src\" value=\"{$url}\"><param name=\"autoplay\" value=\"false\"><param name=\"controller\" value=\"true\"><embed src=\"{$url}\" width=\"{$width}\" height=\"{$height}\" type=\"video/mp4\" autoplay=\"false\" controller=\"true\" pluginspage=\"http://www.apple.com/jp/quicktime/download/\"></object></video>";
+		}
+	}
 	/**
 	 * Get the YouTube video ID from the supplied URL.
 	 *
