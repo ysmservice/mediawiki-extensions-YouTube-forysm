@@ -40,9 +40,6 @@ class YouTube {
 		$parser->setHook( 'youtube', [ __CLASS__, 'embedYouTube' ] );
 		$parser->setHook( 'aovideo', [ __CLASS__, 'embedArchiveOrgVideo' ] );
 		$parser->setHook( 'aoaudio', [ __CLASS__, 'embedArchiveOrgAudio' ] );
-		$parser->setHook( 'wegame', [ __CLASS__, 'embedWeGame' ] );
-		$parser->setHook( 'tangler', [ __CLASS__, 'embedTangler' ] );
-		$parser->setHook( 'gtrailer', [ __CLASS__, 'embedGametrailers' ] );
 		$parser->setHook( 'nicovideo', [ __CLASS__, 'embedNicovideo' ] );
 		$parser->setHook( 'ysmfilm', [ __CLASS__, 'embedYsmfilmVideo' ] );
 	}
@@ -176,76 +173,49 @@ class YouTube {
 			$argsStr = wfArrayToCgi( $urlArgs );
 		}
 
-		// Which technology to use for embedding -- HTML5 or Flash Player?
-		if ( !empty( $argv['type'] ) && strtolower( $argv['type'] ) == 'flash' ) {
-			$width = $width_max = 425;
-			$height = $height_max = 355;
+		// If the type argument wasn't supplied, default to HTML5, since that's
+		// what YouTube offers by default as well
+		$width = 560;
+		$height = 315;
+		$maxWidth = 960;
+		$maxHeight = 720;
 
-			if (
-				!empty( $argv['width'] ) &&
-				filter_var( $argv['width'], FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 0 ] ] ) &&
-				$argv['width'] <= $width_max
-			) {
-				$width = $argv['width'];
-			}
-			if (
-				!empty( $argv['height'] ) &&
-				filter_var( $argv['height'], FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 0 ] ] ) &&
-				$argv['height'] <= $height_max
-			) {
-				$height = $argv['height'];
-			}
+		if (
+			!empty( $argv['width'] ) &&
+			filter_var( $argv['width'], FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 0 ] ] ) &&
+			$argv['width'] <= $maxWidth
+		) {
+			$width = $argv['width'];
+		}
+		if (
+			!empty( $argv['height'] ) &&
+			filter_var( $argv['height'], FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 0 ] ] ) &&
+			$argv['height'] <= $maxHeight
+		) {
+			$height = $argv['height'];
+		}
 
-			$urlBase = '//www.youtube.com/v/';
-			if ( !empty( $ytid ) ) {
-				$url = $urlBase . $ytid . $argsStr;
-				return "<object type=\"application/x-shockwave-flash\" data=\"{$url}\" width=\"{$width}\" height=\"{$height}\"><param name=\"movie\" value=\"{$url}\"/><param name=\"wmode\" value=\"transparent\"/></object>";
-			}
-		} else {
-			// If the type argument wasn't supplied, default to HTML5, since that's
-			// what YouTube offers by default as well
-			$width = 560;
-			$height = 315;
-			$maxWidth = 960;
-			$maxHeight = 720;
+		// Support YouTube's "enhanced privacy mode", in which "YouTube won’t
+		// store information about visitors on your web page unless they play
+		// the video" if the privacy argument was supplied
+		// @see https://support.google.com/youtube/answer/171780?expand=PrivacyEnhancedMode#privacy
+		$urlBase = '//www.youtube-nocookie.com/embed/';
 
-			if (
-				!empty( $argv['width'] ) &&
-				filter_var( $argv['width'], FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 0 ] ] ) &&
-				$argv['width'] <= $maxWidth
-			) {
-				$width = $argv['width'];
+		if ( !empty( $ytid ) ) {
+			$url = $urlBase . $ytid . '?' . $argsStr;
+			$content = $iframe = "<iframe data-extension=\"youtube\" width=\"{$width}\" height=\"{$height}\" src=\"{$url}\" frameborder=\"0\" allowfullscreen></iframe>";
+			if ( $wgYouTubeEnableLazyLoad ) {
+				$img =
+					'<img width="' . $width . '" height="' . $height . '" src="'
+					. '//img.youtube.com/vi/' . $ytid . '/default.jpg" />';
+				$content =
+					'<div style="width: ' . $width . 'px; height:' . $height . 'px;"'
+					. 'class="ext-YouTube-video ext-YouTube-video--lazy" data-ytid="' . $ytid . '">'
+					. $img
+					. '<!-- ' . $iframe . ' -->'
+					. '</div>';
 			}
-			if (
-				!empty( $argv['height'] ) &&
-				filter_var( $argv['height'], FILTER_VALIDATE_INT, [ 'options' => [ 'min_range' => 0 ] ] ) &&
-				$argv['height'] <= $maxHeight
-			) {
-				$height = $argv['height'];
-			}
-
-			// Support YouTube's "enhanced privacy mode", in which "YouTube won’t
-			// store information about visitors on your web page unless they play
-			// the video" if the privacy argument was supplied
-			// @see https://support.google.com/youtube/answer/171780?expand=PrivacyEnhancedMode#privacy
-			$urlBase = '//www.youtube-nocookie.com/embed/';
-
-			if ( !empty( $ytid ) ) {
-				$url = $urlBase . $ytid . '?' . $argsStr;
-				$content = $iframe = "<iframe width=\"{$width}\" height=\"{$height}\" src=\"{$url}\" frameborder=\"0\" allowfullscreen></iframe>";
-				if ( $wgYouTubeEnableLazyLoad ) {
-					$img =
-						'<img width="' . $width . '" height="' . $height . '" src="'
-						. '//img.youtube.com/vi/' . $ytid . '/default.jpg" />';
-					$content =
-						'<div style="width: ' . $width . 'px; height:' . $height . 'px;"'
-						. 'class="ext-YouTube-video ext-YouTube-video--lazy" data-ytid="' . $ytid . '">'
-						. $img
-						. '<!-- ' . $iframe . ' -->'
-						. '</div>';
-				}
-				return $content;
-			}
+			return $content;
 		}
 	}
 
@@ -336,129 +306,7 @@ class YouTube {
 			if ( !empty( $argv['playlist'] ) ) {
 				$uri .= "&playlist=" . (bool)$argv['playlist'];
 			}
-			return "<iframe src=\"$uri\" width=\"$width\" height=\"$height\" frameborder=\"0\" webkitallowfullscreen=\"true\" mozallowfullscreen=\"true\" allowfullscreen></iframe>";
-		}
-	}
-
-	public static function url2weid( $url ) {
-		$id = $url;
-
-		if ( preg_match( '/^http:\/\/www\.wegame\.com\/watch\/(.+)\/$/', $url, $preg ) ) {
-			$id = $preg[1];
-		}
-
-		preg_match( '/([0-9A-Za-z_-]+)/', $id, $preg );
-		$id = $preg[1];
-
-		return $id;
-	}
-
-	public static function embedWeGame( $input, $argv, $parser ) {
-		$weid   = '';
-		$width  = $width_max  = 488;
-		$height = $height_max = 387;
-
-		if ( !empty( $argv['weid'] ) ) {
-			$weid = self::url2weid( $argv['weid'] );
-		} elseif ( !empty( $input ) ) {
-			$weid = self::url2weid( $input );
-		}
-		if (
-			!empty( $argv['width'] ) &&
-			settype( $argv['width'], 'integer' ) &&
-			( $width_max >= $argv['width'] )
-		) {
-			$width = $argv['width'];
-		}
-		if (
-			!empty( $argv['height'] ) &&
-			settype( $argv['height'], 'integer' ) &&
-			( $height_max >= $argv['height'] )
-		) {
-			$height = $argv['height'];
-		}
-
-		if ( !empty( $weid ) ) {
-			return "<object type=\"application/x-shockwave-flash\" data=\"http://www.wegame.com/static/flash/player2.swf\" width=\"{$width}\" height=\"{$height}\"><param name=\"flashvars\" value=\"tag={$weid}\"/></object>";
-		}
-	}
-
-	public static function url2tgid( $input ) {
-		$tid = $gid = 0;
-
-		if ( preg_match( '/^id=([0-9]+)\|gId=([0-9]+)$/i', $input, $preg ) ) {
-			$tid = $preg[1];
-			$gid = $preg[2];
-		} elseif ( preg_match( '/^gId=([0-9]+)\|id=([0-9]+)$/i', $input, $preg ) ) {
-			$tid = $preg[2];
-			$gid = $preg[1];
-		} elseif ( preg_match( '/^([0-9]+)\|([0-9]+)$/', $input, $preg ) ) {
-			$tid = $preg[1];
-			$gid = $preg[2];
-		}
-
-		return [ $tid, $gid ];
-	}
-
-	public static function embedTangler( $input, $argv, $parser ) {
-		$tid = $gid = '';
-
-		if ( !empty( $argv['tid'] ) && !empty( $argv['gid'] ) ) {
-			list( $tid, $gid ) = self::url2tgid( "{$argv['tid']}|{$argv['gid']}" );
-		} elseif ( !empty( $input ) ) {
-			list( $tid, $gid ) = self::url2tgid( $input );
-		}
-
-		if ( !empty( $tid ) && !empty( $gid ) ) {
-			return "<p style=\"width: 410px; height: 480px\" id=\"tangler-embed-topic-{$tid}\"></p><script src=\"http://www.tangler.com/widget/embedtopic.js?id={$tid}&gId={$gid}\"></script>";
-		}
-	}
-
-	public static function url2gtid( $url ) {
-		$id = $url;
-
-		if ( preg_match( '/^http:\/\/www\.gametrailers\.com\/player\/(.+)\.html$/', $url, $preg ) ) {
-			$id = $preg[1];
-		} elseif ( preg_match( '/^http:\/\/www\.gametrailers\.com\/remote_wrap\.php\?mid=(.+)$/', $url, $preg ) ) {
-			$id = $preg[1];
-		}
-
-		preg_match( '/([0-9]+)/', $id, $preg );
-		$id = $preg[1];
-
-		return $id;
-	}
-
-	public static function embedGametrailers( $input, $argv, $parser ) {
-		$gtid   = '';
-		$width  = $width_max  = 480;
-		$height = $height_max = 392;
-
-		if ( !empty( $argv['gtid'] ) ) {
-			$gtid = self::url2gtid( $argv['gtid'] );
-		} elseif ( !empty( $input ) ) {
-			$gtid = self::url2gtid( $input );
-		}
-		if (
-			!empty( $argv['width'] ) &&
-			settype( $argv['width'], 'integer' ) &&
-			( $width_max >= $argv['width'] )
-		) {
-			$width = $argv['width'];
-		}
-		if (
-			!empty( $argv['height'] ) &&
-			settype( $argv['height'], 'integer' ) &&
-			( $height_max >= $argv['height'] )
-		) {
-			$height = $argv['height'];
-		}
-
-		if ( !empty( $gtid ) ) {
-			$url = "http://www.gametrailers.com/remote_wrap.php?mid={$gtid}";
-			// return "<object type=\"application/x-shockwave-flash\" width=\"{$width}\" height=\"{$height}\"><param name=\"movie\" value=\"{$url}\"/></object>";
-			// gametrailers' flash doesn't work on FF with object tag alone )-: weird, yt and gvideo are ok )-: valid xhtml no more )-:
-			return "<object classid=\"clsid:d27cdb6e-ae6d-11cf-96b8-444553540000\"  codebase=\"http://download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab#version=8,0,0,0\" id=\"gtembed\" width=\"{$width}\" height=\"{$height}\">	<param name=\"allowScriptAccess\" value=\"sameDomain\" /> 	<param name=\"allowFullScreen\" value=\"true\" /> <param name=\"movie\" value=\"{$url}\"/> <param name=\"quality\" value=\"high\" /> <embed src=\"{$url}\" swLiveConnect=\"true\" name=\"gtembed\" align=\"middle\" allowScriptAccess=\"sameDomain\" allowFullScreen=\"true\" quality=\"high\" pluginspage=\"http://www.macromedia.com/go/getflashplayer\" type=\"application/x-shockwave-flash\" width=\"{$width}\" height=\"{$height}\"></embed> </object>";
+			return "<iframe data-extension=\"youtube\" src=\"$uri\" width=\"$width\" height=\"$height\" frameborder=\"0\" webkitallowfullscreen=\"true\" mozallowfullscreen=\"true\" allowfullscreen></iframe>";
 		}
 	}
 
@@ -496,7 +344,7 @@ class YouTube {
 
 		if ( !empty( $nvid ) ) {
 			$url = "https://embed.nicovideo.jp/watch/{$nvid}";
-			return "<iframe width=\"{$width}\" height=\"{$height}\" src=\"{$url}\"></iframe>";
+			return "<iframe data-extension=\"youtube\" width=\"{$width}\" height=\"{$height}\" src=\"{$url}\"></iframe>";
 		}
 	}
 

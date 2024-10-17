@@ -1,9 +1,8 @@
 {
 	"@metadata": {
 		"authors": [
-			"Cosine02",
-			"Stang"
+			"Anterdc99"
 		]
 	},
-	"youtube-desc": "允许插入Youtube电影、Archive.org影音、WeGame及Gametrailers影片和Tangler forum"
+	"youtube-desc": "嵌入[https://www.youtube.com/ Youtube]电影、[https://archive.org/ Archive.org]影音及[https://www.nicovideo.jp/ Niconico]视频"
 }
