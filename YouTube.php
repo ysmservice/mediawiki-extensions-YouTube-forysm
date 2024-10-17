@@ -53,7 +53,7 @@ class YouTube {
 	public static function url2yfvid( $url ) {
 		$id = $url;
 
-		if ( preg_match( '/https:\/\/ysmfilm\.net\/view.php\?id\=(.+)$/', $url, $preg ) ) {
+		if ( preg_match( '/https:\/\/ysmfilm\.net\/view\?id\=(.+)$/', $url, $preg ) ) {
 			$id = $preg[1];
 		}
 
@@ -86,7 +86,7 @@ class YouTube {
 		}
 
 		if ( !empty( $aovid ) ) {
-			$url = "https://ysmfilm.net/video/{$aovid}.mp4";
+			$url = "https://ysmfilm.net/storage/video/{$aovid}.mp4";
 			return "<video width=\"".$width."\" height=\"".$height."\" src=\"{$url}\" controls=\"\" controlslist=\"nodownload\"><source src=\"{$url}\"><object width=\"{$width}\" height=\"{$height}\" data=\"{$url}\"><param name=\"src\" value=\"{$url}\"><param name=\"autoplay\" value=\"false\"><param name=\"controller\" value=\"true\"><embed src=\"{$url}\" width=\"{$width}\" height=\"{$height}\" type=\"video/mp4\" autoplay=\"false\" controller=\"true\" pluginspage=\"http://www.apple.com/jp/quicktime/download/\"></object></video>";
 		}
 	}
